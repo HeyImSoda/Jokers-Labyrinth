@@ -1,0 +1,4 @@
+Things that need fixing:
+- Players start in the middle of the board (they should be able to pick a starting corner)
+- Need a way to select the amount of players playing before the game ends
+- some cards were bugging out (ex, I revealed the 3 of hearts and it was just solid red when it flipped over)
