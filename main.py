@@ -1,427 +1,169 @@
 # --- START OF FILE main.py ---
 
 import tkinter as tk
-from tkinter import ttk
-from PIL import Image, ImageTk
-import os
-import time # Potentially needed for delays if actions get complex
+from PIL import ImageTk # Need ImageTk here now
+import random
+import time
 
-# --- Import from card logic module ---
-try:
-    # Assuming Card class has attributes like:
-    # card.suit (e.g., "hearts", "clubs", "black_joker")
-    # card.rank (e.g., 1 (Ace) to 13 (King), 14 (Joker))
-    # card.rank_string (e.g., "ace", "two", "king", "fourteen")
-    # card.get_suit() -> returns suit
-    # card.get_rank_string() -> returns rank_string
-    # card.get_color() -> returns 'red' or 'black' (or None for Jokers?) - ADD THIS TO card_logic.py if needed
-    from card_logic import Card, create_shuffled_deck
-except ImportError:
-    print("Error: Could not import from card_logic.py.")
-    print("Make sure card_logic.py is in the same directory as main.py.")
-    print("Ensure the Card class has suit, rank, rank_string attributes/methods.")
-    exit()
-except AttributeError:
-    print("Error: Imported Card class might be missing expected attributes/methods (suit, rank, rank_string).")
-    exit()
+# --- Local Modules ---
+import config
+import assets_manager # Will load PIL assets
+import ui_manager
+import animation
+import hand_manager
+import game_logic
+import utils
+from card_logic import Card, create_shuffled_deck
 
-
-# --- Configuration ---
-assets_base_path = r"C:\Users\stell\Desktop\Python Files\Jokers_Labyrinth\assets" # <<< Use your actual path
-card_faces_path = os.path.join(assets_base_path, "card_faces")
-card_back_path = os.path.join(assets_base_path, "card_back.png")
-
-rows = 7
-columns = 7
-animation_delay = 6
-animation_steps = 36
-card_scale_factor = 1.5
-info_panel_width = 300
-
-# --- NEW: Game State / Player Info ---
-player_suit = "spades" # Example: Player is the Jack of Spades. Change as needed.
-print(f"Player Suit Set To: {player_suit.upper()}")
-
-# Card state tracking (optional but can be useful)
-# 0: Face Down, 1: Face Up (Actionable), 2: Action Taken/Disabled
-card_state_grid = [[0 for _ in range(columns)] for _ in range(rows)]
-
-
-# --- Basic File/Directory Checks ---
-# ... (keep existing checks) ...
-if not os.path.exists(card_back_path):
-    print(f"Error: Card back image file not found at path: {card_back_path}")
-    exit()
-if not os.path.isdir(card_faces_path):
-    print(f"Error: Card faces directory not found at path: {card_faces_path}")
-    exit()
-
-# --- Create the main window ---
-root = tk.Tk()
-root.title("Joker's Labyrinth")
-root.config(bg="dark green")
-
-# --- Load Card Back Image and Apply Scaling ---
-# ... (keep existing image loading and scaling) ...
-try:
-    card_back_pil_original = Image.open(card_back_path)
-    original_width, original_height = card_back_pil_original.size
-    scaled_width = int(original_width * card_scale_factor)
-    scaled_height = int(original_height * card_scale_factor)
-    card_back_pil_scaled = card_back_pil_original.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
-    tk_photo_back_scaled = ImageTk.PhotoImage(card_back_pil_scaled)
-except Exception as e:
-    print(f"An error occurred while loading card back image: {e}")
-    root.destroy()
-    exit()
-
-# --- Pre-load Card Face Images (Scaled) ---
-# ... (keep existing image loading and scaling) ...
-card_face_images_pil = {}
-tk_card_face_images = {}
-print("Loading and scaling card face images...")
-if os.path.isdir(card_faces_path):
-    loaded_count = 0
-    # ... (rest of the image loading loop remains the same) ...
-    for filename in os.listdir(card_faces_path):
-        if filename.lower().endswith(".png"):
-            image_path = os.path.join(card_faces_path, filename)
-            image_key = filename.lower().replace('.png', '')
-            try:
-                img_pil_original = Image.open(image_path)
-                img_pil_scaled = img_pil_original.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
-                card_face_images_pil[image_key] = img_pil_scaled
-                tk_card_face_images[image_key] = ImageTk.PhotoImage(img_pil_scaled)
-                loaded_count += 1
-            except Exception as e:
-                print(f"Warning: Could not load or process {filename}: {e}")
-    print(f"Loaded {loaded_count} card face images.")
-    expected_image_count = 54
-    if loaded_count < expected_image_count:
-         print(f"Warning: Expected {expected_image_count} images, but only found {loaded_count}.")
-else:
-    print(f"Error: Card faces directory not found: {card_faces_path}")
-    # exit()
-
-
-# --- Create Frames for Layout ---
-# ... (keep existing frame setup) ...
-grid_frame = tk.Frame(root, bg=root.cget('bg'))
-info_frame = tk.Frame(root, bg="grey20", width=info_panel_width, padx=15, pady=15)
-grid_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
-info_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
-root.grid_columnconfigure(0, weight=0)
-root.grid_columnconfigure(1, weight=1)
-root.grid_rowconfigure(0, weight=1)
-
-# --- Add Title & Info Panel Content ---
-# ... (keep existing info panel setup) ...
-title_label = tk.Label(info_frame, text="Joker's Labyrinth", font=("Arial", 24, "bold"), fg="white", bg=info_frame.cget('bg'))
-title_label.pack(pady=10, anchor='n')
-separator = ttk.Separator(info_frame, orient='horizontal')
-separator.pack(fill='x', pady=10)
-info_content_label = tk.Label(info_frame, text=f"Playing as Jack of {player_suit.title()}\n(Turn Info Placeholder)", justify=tk.LEFT, font=("Arial", 12), fg="light grey", bg=info_frame.cget('bg'))
-info_content_label.pack(pady=20, anchor='n', fill='x')
-
-
-# --- Create and Shuffle the Deck ---
-# ... (keep existing deck creation and modification) ...
-full_deck = create_shuffled_deck()
-try:
-    card_to_remove = Card(suit="clubs", rank=2, rank_string="two")
-    # Ensure your Card class __eq__ method works correctly for removal
-    if card_to_remove in full_deck:
-        full_deck.remove(card_to_remove)
-    else:
-         print(f"Warning: Could not find {card_to_remove} in deck to remove.")
-    full_deck.append(Card("black_joker", 14, "fourteen"))
-    middle_index = len(full_deck) // 2
-    full_deck.insert(middle_index, Card("red_joker", 14, "fourteen"))
-except (ValueError, AttributeError, TypeError) as e:
-    # Catch potential issues with Card comparison or attributes
-    print(f"Error modifying deck: {e}. Check Card definition, __eq__, and presence.")
-
-print(f"Deck size: {len(full_deck)}")
-# --- Prepare Grids ---
-card_data_grid = [[None for _ in range(columns)] for _ in range(rows)]
-button_grid = [[None for _ in range(columns)] for _ in range(rows)]
-# Card state grid already initialized above
-
-# --- Deal Cards into the Grid ---
-# ... (keep existing dealing logic) ...
-print("Dealing cards into grid...")
-cards_needed = rows * columns
-card_index = 0
-deal_complete = False
-for r in range(rows):
-    if deal_complete: break
-    for c in range(columns):
-        if card_index < len(full_deck):
-            card_data_grid[r][c] = full_deck[card_index]
-            card_state_grid[r][c] = 0 # State: Face Down
-            card_index += 1
-            if card_index >= cards_needed:
-                deal_complete = True
-                break
-        else:
-            print("Warning: Deck ran out of cards before filling the grid.")
-            deal_complete = True
-            break
-
-
-# --- NEW: Function to Handle Action on Revealed Card ---
-def handle_card_action(row, col):
-    """
-    Determines and executes the action for a revealed card based on game rules.
-    This currently just prints placeholder actions.
-    """
-    button = button_grid[row][col]
-    card = card_data_grid[row][col]
-
-    if not card or not button or not button.winfo_exists():
-        print(f"Error: Missing card, button, or button destroyed for action at ({row},{col}).")
-        return
-
-    # --- Permanently Disable after Action ---
-    button.config(state=tk.DISABLED)
-    card_state_grid[row][col] = 2 # State: Action Taken/Disabled
-    print(f"--- Action taken for card {card} at ({row}, {col}) ---")
-
-    # --- Determine Action Based on Card ---
-    card_suit = card.get_suit().lower() # Ensure lowercase for comparison
-    card_rank = card.rank # Assuming rank is an integer attribute
-    card_color = None # Determine color (requires Card class support or logic here)
-
-    # Basic color determination (add to Card class ideally)
-    if card_suit in ["hearts", "diamonds"]:
-        card_color = "red"
-    elif card_suit in ["clubs", "spades"]:
-        card_color = "black"
-
-    # Jokers
-    if "joker" in card_suit:
-        print("Action: Joker! (Special effect TBD)")
-        # Future: Implement Joker effect
-
-    # Number Cards (Assuming Ace=1, 2-10)
-    elif 1 <= card_rank <= 10:
-        if card_color == "red":
-            print(f"Action: Pickup Red Number ({card.rank_string.title()})")
-            # Future: Implement pickup logic
-        elif card_color == "black":
-            print(f"Action: Battle Black Number ({card.rank_string.title()})")
-            # Future: Implement battle logic
-        else:
-             print(f"Warning: Unknown color for number card {card}")
-
-    # Face Cards (Assuming Jack=11, Queen=12, King=13)
-    elif 11 <= card_rank <= 13:
-        is_player_suit = (card_suit == player_suit)
-        print(f"Action: Face Card ({card.rank_string.title()} of {card_suit.title()})")
-        if is_player_suit:
-            print("   - Option: Pickup (Player Suit)")
-            print("   - Option: Battle (Player Suit)")
-            # Future: Let player choose or implement rules
-        else:
-            print("   - Action: Battle (Other Suit)")
-            # Future: Implement battle logic
-
-    # Unknown Card Type
-    else:
-        print(f"Action: Unknown card type - {card}")
-
-    print("-------------------------------------------------")
-    # --- Add Effects Here (e.g., removing card image, updating score) ---
-    # Example: Make the card visually disappear after action
-    # button.config(image='') # Clear image
-    # button.image = None
-    # Or hide the button completely:
-    # button.grid_forget()
-
-
-# --- Modified Function called AFTER the GROW animation finishes ---
-def on_card_revealed(row, col):
-    """
-    Finalizes the card reveal after animation.
-    Sets the final face image AND RE-ENABLES the button for the second click.
-    """
-    button = button_grid[row][col]
-    card = card_data_grid[row][col]
-
-    if button and card and button.winfo_exists():
-        # print(f"Card revealed (final state): {card} at ({row},{col})") # Less verbose
-
-        image_key = f"{card.get_suit()}_{card.get_rank_string()}"
-        tk_photo_final = tk_card_face_images.get(image_key)
-
-        if tk_photo_final:
-            button.config(image=tk_photo_final)
-            button.image = tk_photo_final
-            # --- CHANGE: Re-enable the button for the next action ---
-            button.config(state=tk.NORMAL)
-            card_state_grid[row][col] = 1 # State: Face Up (Actionable)
-            # print(f"Button ({row},{col}) re-enabled for action.") # Debug
-        else:
-            print(f"Error: Could not find pre-loaded image for key: {image_key} in on_card_revealed")
-            button.config(image=tk_photo_back_scaled)
-            button.image = tk_photo_back_scaled
-            # Keep disabled if image loading failed? Or allow retry? For now, disable.
-            button.config(state=tk.DISABLED)
-            card_state_grid[row][col] = 2 # State: Disabled (Error)
-
-    # No else needed, error handled in calling function or here
-
-
-# --- Helper function to update the button image during animation ---
-def _update_animation_step(button, image_to_resize_pil, target_width, target_height):
-    # ... (keep existing helper function - no changes needed here) ...
-    if not button.winfo_exists(): return
-    target_width = max(1, target_width)
-    target_height = max(1, target_height)
+# --- NEW Helper Function to Create Tkinter Images ---
+def create_tk_images(root, pil_assets):
+    """Creates Tkinter PhotoImage objects from loaded PIL images."""
+    print("Creating Tkinter PhotoImages...")
+    tk_images = {}
+    # Create Tkinter image for card back
     try:
-        resized_image_pil = image_to_resize_pil.resize((target_width, target_height), Image.Resampling.LANCZOS)
-        new_tk_image = ImageTk.PhotoImage(resized_image_pil)
-        button.config(image=new_tk_image)
-        button.image = new_tk_image
+        tk_images["tk_photo_back"] = ImageTk.PhotoImage(pil_assets["card_back_pil_scaled"], master=root)
     except Exception as e:
-        if button.winfo_exists():
-             # Check TclError specifically which can happen on window close during animation
-             if isinstance(e, tk.TclError):
-                 pass # Ignore Tcl errors likely due to widget destruction
-             else:
-                 print(f"Error in _update_animation_step (resizing/PhotoImage): {e}")
+        print(f"FATAL ERROR creating Tkinter image for card back: {e}")
+        exit()
+
+    # Create Tkinter images for card faces
+    tk_images["tk_faces"] = {}
+    for key, pil_img in pil_assets["pil_faces_scaled"].items():
+        try:
+            tk_images["tk_faces"][key] = ImageTk.PhotoImage(pil_img, master=root)
+        except Exception as e:
+            print(f"Warning: Could not create Tkinter image for face {key}: {e}")
+            # Decide how to handle missing face images - skip? placeholder? exit?
+            # For now, we just won't have that image in tk_faces
+
+    print("- Tkinter PhotoImages created.")
+    return tk_images
 
 
-# --- Flip Animation Function using Loops and root.after ---
-def animate_flip(button, row, col):
-    # ... (keep existing animation logic - no changes needed here) ...
-    card = card_data_grid[row][col]
-    if not card:
-        print(f"Error: No card data found for animation at ({row},{col})")
-        if button.winfo_exists(): button.config(state=tk.NORMAL)
-        return
+# --- Main Application Setup ---
+def main():
+    # 1. Create Main Window FIRST
+    root = ui_manager.create_main_window()
 
-    image_key = f"{card.get_suit()}_{card.get_rank_string()}"
-    card_face_pil_to_grow = card_face_images_pil.get(image_key)
+    # 2. Load PIL Assets
+    pil_assets = assets_manager.load_pil_assets() # Loads only PIL images now
+    scaled_width = pil_assets["width"]
+    scaled_height = pil_assets["height"]
 
-    if not card_face_pil_to_grow:
-        print(f"Error: Could not find PIL face image for key: {image_key} to animate.")
-        on_card_revealed(row, col) # Reveal instantly without animation (will re-enable)
-        return
+    # 3. Create Tkinter Images (using the root window and PIL assets)
+    tk_assets = create_tk_images(root, pil_assets)
 
-    # --- 1. Schedule Shrinking Steps ---
-    for step in range(animation_steps):
-        delay = (step + 1) * animation_delay
-        fraction = 1.0 - (step + 1) / animation_steps
-        new_width = int(scaled_width * fraction)
-        root.after(delay, _update_animation_step, button, card_back_pil_scaled, new_width, scaled_height)
-
-    # --- 2. Schedule Growing Steps ---
-    base_grow_delay = animation_steps * animation_delay
-    for step in range(animation_steps):
-        delay = base_grow_delay + (step + 1) * animation_delay
-        fraction = (step + 1) / animation_steps
-        new_width = int(scaled_width * fraction)
-        root.after(delay, _update_animation_step, button, card_face_pil_to_grow, new_width, scaled_height)
-
-    # --- 3. Schedule the final reveal function call ---
-    final_delay = (animation_steps * 2) * animation_delay + (animation_delay // 2)
-    root.after(final_delay, on_card_revealed, row, col) # This will re-enable button
+    # 4. Combine all assets into a single dictionary
+    assets = {**pil_assets, **tk_assets} # Merge PIL and Tk dictionaries
+    # Ensure essential tk images exist before proceeding
+    if "tk_photo_back" not in assets:
+        print("FATAL ERROR: Tkinter card back image not available after creation.")
+        exit()
+    tk_photo_back = assets["tk_photo_back"] # Get reference for button creation
 
 
-# --- MODIFIED Click Handler ---
-def handle_card_click(row, col):
-    """
-    Called when a button is clicked.
-    Determines if it's the first click (flip) or second click (action).
-    """
-    button = button_grid[row][col]
-    card = card_data_grid[row][col]
-    current_state = card_state_grid[row][col]
+    # 5. Setup Layout (needs dimensions from assets)
+    grid_frame, info_frame = ui_manager.setup_layout(root, scaled_width, scaled_height)
 
-    if not button or not card or not button.winfo_exists():
-        print(f"Warning: Clicked on invalid/empty/destroyed grid position ({row},{col})")
-        return
+    # 6. Setup Info Panel Content
+    info_text_var = ui_manager.setup_info_panel_content(info_frame)
 
-    # --- Check State to Decide Action ---
+    # 7. Setup Hand Display (needs dimensions from assets)
+    hand_frame, hand_card_slots = ui_manager.setup_hand_display(info_frame, scaled_width, scaled_height)
 
-    # State 0: Face Down - First click, initiate flip
-    if current_state == 0 and button['state'] == tk.NORMAL:
-        print(f"First click on ({row},{col}). Flipping card...")
-        button.config(state=tk.DISABLED) # Disable *during* animation ONLY
-        # card_state_grid[row][col] # State will be updated to 1 in on_card_revealed
-        animate_flip(button, row, col)
+    # 8. Initialize Game Data Structures
+    card_data_grid = [[None for _ in range(config.COLUMNS)] for _ in range(config.ROWS)]
+    button_grid = [[None for _ in range(config.COLUMNS)] for _ in range(config.ROWS)]
+    card_state_grid = [[config.STATE_ACTION_TAKEN for _ in range(config.COLUMNS)] for _ in range(config.ROWS)]
+    hand_card_data = [[None for _ in range(config.HAND_COLS)] for _ in range(config.HAND_ROWS)]
 
-    # State 1: Face Up / Actionable - Second click, initiate action
-    elif current_state == 1 and button['state'] == tk.NORMAL:
-        print(f"Second click on ({row},{col}). Performing action...")
-        # Action function will disable the button permanently and set state to 2
-        handle_card_action(row, col)
-
-    # State 2: Action Taken / Disabled OR button is currently DISABLED (e.g., animating)
-    elif current_state == 2 or button['state'] == tk.DISABLED:
-        # print(f"Button ({row},{col}) is already actioned or currently busy.") # Ignored click
-        pass # Do nothing
-
-    else:
-        # Should not happen with current logic, but good for debugging
-        print(f"Warning: Unhandled click state for ({row},{col}) - State: {current_state}, Button State: {button['state']}")
+    # 9. Share necessary state with game_logic module
+    # Pass the *complete* assets dictionary
+    game_logic.game_state["root"] = root
+    game_logic.game_state["assets"] = assets # Now contains both PIL and Tk images
+    game_logic.game_state["card_data_grid"] = card_data_grid
+    game_logic.game_state["button_grid"] = button_grid
+    game_logic.game_state["card_state_grid"] = card_state_grid
+    game_logic.game_state["hand_card_data"] = hand_card_data
+    game_logic.game_state["hand_card_slots"] = hand_card_slots
+    game_logic.game_state["info_frame_bg"] = info_frame.cget('bg')
 
 
-# --- Create and place the buttons in the grid_frame ---
-# ... (keep existing button creation loop, ensure command calls handle_card_click) ...
-print("Creating button grid...")
-for r in range(rows):
-    for c in range(columns):
-        if card_data_grid[r][c] is not None:
-            button_bg = grid_frame.cget('bg')
-            button = tk.Button(grid_frame, image=tk_photo_back_scaled,
-                               # Command now handles both clicks via state check
-                               command=lambda row=r, col=c: handle_card_click(row, col),
-                               borderwidth=0,
-                               highlightthickness=0,
-                               relief=tk.FLAT,
-                               bg=button_bg,
-                               activebackground=button_bg,
-                               # Start enabled if there's a card
-                               state=tk.NORMAL if card_data_grid[r][c] else tk.DISABLED)
+    # 10. Prepare Deck
+    print("Preparing deck...")
+    # ... (Deck preparation logic remains the same) ...
+    full_deck = create_shuffled_deck()
+    try:
+        card_to_remove = Card(suit=config.CARD_TO_REMOVE_SUIT, rank=config.CARD_TO_REMOVE_RANK, rank_string=config.CARD_TO_REMOVE_RANK_STR)
+        initial_len = len(full_deck)
+        full_deck = [card for card in full_deck if card != card_to_remove]
+        if len(full_deck) < initial_len: print(f"- Removed: {card_to_remove}")
+    except Exception as e: print(f"Warning: Error removing card: {e}")
+    black_joker_card = Card(config.BLACK_JOKER_SUIT, config.BLACK_JOKER_RANK, config.BLACK_JOKER_RANK_STR)
+    if black_joker_card not in full_deck:
+        full_deck.append(black_joker_card)
+        print("- Added Black Joker")
+        random.shuffle(full_deck)
+        print("- Shuffled Black Joker into deck.")
+    red_joker_card = Card(config.RED_JOKER_SUIT, config.RED_JOKER_RANK, config.RED_JOKER_RANK_STR)
+    print(f"Deck ready for dealing (excluding Red Joker): {len(full_deck)} cards")
 
-            button.image = tk_photo_back_scaled
-            button.grid(row=r, column=c, padx=1, pady=1)
-            button_grid[r][c] = button
-        else:
-            # Create placeholder if no card dealt here
-            placeholder = tk.Frame(grid_frame,
-                                   width=scaled_width,
-                                   height=scaled_height,
-                                   bg=grid_frame.cget('bg'))
-            placeholder.grid(row=r, column=c, padx=1, pady=1)
-            button_grid[r][c] = None
-            card_state_grid[r][c] = 2 # Mark empty slots as 'Disabled' state
+    # 11. Deal Cards
+    print("Dealing cards...")
+    # ... (Dealing logic remains the same) ...
+    center_r, center_c = config.ROWS // 2, config.COLUMNS // 2
+    card_index = 0
+    dealt_count = 0
+    for r in range(config.ROWS):
+        for c in range(config.COLUMNS):
+            if r == center_r and c == center_c:
+                card_state_grid[r][c] = config.STATE_FACE_DOWN
+                continue
+            if card_index < len(full_deck):
+                card_data_grid[r][c] = full_deck[card_index]
+                card_state_grid[r][c] = config.STATE_FACE_DOWN
+                card_index += 1
+                dealt_count += 1
+    card_data_grid[center_r][center_c] = red_joker_card
+    print(f"- Dealt {dealt_count} cards. Total cards on grid: {dealt_count + 1}")
+
+    # 12. Create Grid Buttons (uses tk_photo_back from the complete 'assets')
+    print("Creating button grid...")
+    # ... (Button creation logic remains the same, uses tk_photo_back) ...
+    button_bg = grid_frame.cget('bg')
+    for r in range(config.ROWS):
+        for c in range(config.COLUMNS):
+            card = card_data_grid[r][c]
+            if card is not None:
+                button = tk.Button(grid_frame, image=tk_photo_back, # Use loaded tk image
+                                   command=lambda row=r, col=c: game_logic.handle_card_click(row, col),
+                                   borderwidth=0, highlightthickness=0, relief=tk.FLAT,
+                                   bg=button_bg, activebackground=button_bg,
+                                   state=tk.NORMAL)
+                button.image = tk_photo_back
+                button.grid(row=r, column=c, padx=1, pady=1)
+                button_grid[r][c] = button
+            else:
+                placeholder = tk.Frame(grid_frame,
+                                       width=scaled_width, height=scaled_height,
+                                       bg=grid_frame.cget('bg'))
+                placeholder.grid(row=r, column=c, padx=1, pady=1)
 
 
-# --- Simple Grid Printout Function (Definition only) ---
-def simple_print_grid(grid_to_print, title="Grid"):
-    # ... (keep existing print function) ...
-    print(f"\n--- Simple {title} Printout ---")
-    if not grid_to_print:
-        print("[Grid is empty]")
-        return
-    for row_idx, row in enumerate(grid_to_print):
-        print(f"Row {row_idx}: ", end="")
-        for item in row:
-            print(f"{repr(item):<25}", end=" ")
-        print()
-    print("--------------------------\n")
-
-# Example usage (optional, call when needed for debugging):
-# simple_print_grid(card_data_grid, title="Card Data")
-# simple_print_grid(card_state_grid, title="Card State")
+    # Optional: Print initial state for debugging
+    # utils.simple_print_grid(card_data_grid, title="Card Data Grid (Initial)", cols=config.COLUMNS)
+    # utils.simple_print_grid(card_state_grid, title="Card State Grid (Initial)", cols=config.COLUMNS)
 
 
-# --- Start the Tkinter event loop ---
-print("Starting Tkinter main loop...")
-root.mainloop()
+    # 13. Start Tkinter Main Loop
+    print("Starting Tkinter main loop...")
+    root.mainloop()
 
-print("Window closed.")
+    print("Window closed.")
+
+# --- Run the application ---
+if __name__ == "__main__":
+    main()
+
 # --- END OF FILE main.py ---
