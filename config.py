@@ -6,44 +6,41 @@ import os
 ASSETS_BASE_PATH = r"C:\Users\stell\Desktop\Python Files\Jokers_Labyrinth\assets" # <<< Use your actual path
 CARD_FACES_PATH = os.path.join(ASSETS_BASE_PATH, "card_faces")
 CARD_BACK_PATH = os.path.join(ASSETS_BASE_PATH, "card_back.png")
-# --- ADDED: Path for Dice Faces ---
 DICE_FACES_PATH = os.path.join(ASSETS_BASE_PATH, "dice_faces")
-# ----------------------------------
 
 # --- Grid Dimensions ---
 ROWS = 7
 COLUMNS = 7
 
 # --- Animation ---
-ANIMATION_DELAY = 6 # Milliseconds between animation steps
-ANIMATION_STEPS = 36 # How many steps for shrink/grow
+ANIMATION_DELAY = 6 # Milliseconds between animation steps (Card Flip)
+ANIMATION_STEPS = 36 # How many steps for shrink/grow (Card Flip)
 
 # --- Card Visuals ---
 CARD_SCALE_FACTOR = 1.5
 
 # --- UI Layout ---
 INFO_PANEL_WIDTH = 350
-GRID_PADDING_FACTOR = 1.0 # How many card dimensions to pad around the grid (1.0 = one card width/height)
+GRID_PADDING_FACTOR = 1.0
 
 # --- Hand Layout ---
 HAND_ROWS = 2
 HAND_COLS = 8
-HAND_OVERLAP_FACTOR = 0.45 # Show 45% of the card width for overlap
-HAND_VERTICAL_PADDING = 10 # Pixels between hand rows
+HAND_OVERLAP_FACTOR = 0.45
+HAND_VERTICAL_PADDING = 10
 
 # --- Game Rules ---
-PLAYER_SUIT = "spades" # Example: Player character identifies with this suit for NPC interactions.
+PLAYER_SUIT = "spades"
 
 # --- Card States ---
 STATE_FACE_DOWN = 0
 STATE_FACE_UP = 1
-STATE_ACTION_TAKEN = 2 # Represents an empty/processed slot or post-combat disabled state
+STATE_ACTION_TAKEN = 2
 
 # --- Joker Settings ---
 BLACK_JOKER_SUIT = "black_joker"
 BLACK_JOKER_RANK = 14
 BLACK_JOKER_RANK_STR = "fourteen"
-
 RED_JOKER_SUIT = "red_joker"
 RED_JOKER_RANK = 14
 RED_JOKER_RANK_STR = "fourteen"
@@ -54,7 +51,11 @@ CARD_TO_REMOVE_RANK = 2
 CARD_TO_REMOVE_RANK_STR = "two"
 
 # --- Dice Visuals ---
-# Optional: Scale factor for dice images if needed
-DICE_SCALE_FACTOR = 0.3 # Example: Scale dice images down
+DICE_SCALE_FACTOR = 0.3
+
+# --- Combat Animation Timings (NEW) ---
+DICE_ROLL_DELAY = 350       # Milliseconds between each difference die appearing
+DICE_SHUFFLE_DELAY = 60     # Milliseconds between danger die shuffle frames
+DICE_SHUFFLE_STEPS = 12     # How many times the danger die image changes rapidly
 
 # --- END OF FILE config.py ---
