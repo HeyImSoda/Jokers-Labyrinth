@@ -11,11 +11,11 @@ import assets_manager
 import ui_manager
 import animation
 import hand_manager
-import game_logic       # Handles initial click routing
-import card_actions     # Handles actions on revealed cards
-import combat_manager   # Import the new combat module (though not used directly here)
+import game_logic
+import card_actions
+import combat_manager
 import utils
-from card_logic import Card, create_shuffled_deck
+from card_logic import Card, create_shuffled_deck, suits as card_suits, ranks_string as card_ranks_string
 from player import Player
 
 # (create_tk_images function remains the same)
@@ -23,23 +23,23 @@ def create_tk_images(root, pil_assets):
     """Creates Tkinter PhotoImage objects from loaded PIL images."""
     print("Creating Tkinter PhotoImages...")
     tk_images = {}
-    # Create Tkinter image for card back
     try:
         tk_images["tk_photo_back"] = ImageTk.PhotoImage(pil_assets["card_back_pil_scaled"], master=root)
-    except Exception as e:
-        print(f"FATAL ERROR creating Tkinter image for card back: {e}")
-        exit()
+    except Exception as e: exit(f"FATAL ERROR creating Tkinter image for card back: {e}")
 
-    # Create Tkinter images for card faces
     tk_images["tk_faces"] = {}
+    missing_faces = []
     for key, pil_img in pil_assets["pil_faces_scaled"].items():
         try:
             tk_images["tk_faces"][key] = ImageTk.PhotoImage(pil_img, master=root)
         except Exception as e:
             print(f"Warning: Could not create Tkinter image for face {key}: {e}")
-
-    print("- Tkinter PhotoImages created.")
+            missing_faces.append(key)
+    if missing_faces:
+        print(f"Warning: Missing Tk face images for: {', '.join(missing_faces)}")
+    print(f"- Tkinter PhotoImages created ({len(tk_images['tk_faces'])} faces).")
     return tk_images
+
 
 # --- Main Application Setup ---
 def main():
@@ -64,7 +64,8 @@ def main():
     info_frame_bg = info_frame.cget('bg')
 
     # 6. Setup Info Panel
-    info_text_var = ui_manager.setup_info_panel_content(info_frame)
+    player_id_text = f"Playing as Jack of {config.PLAYER_SUIT.title()}"
+    info_text_var = ui_manager.setup_info_panel_content(info_frame, player_id_text)
 
     # 7. Setup Hand Display
     hand_frame, hand_card_slots = ui_manager.setup_hand_display(info_frame, scaled_width, scaled_height)
@@ -72,79 +73,116 @@ def main():
     # 8. Initialize Game State Components
     card_data_grid = [[None for _ in range(config.COLUMNS)] for _ in range(config.ROWS)]
     button_grid = [[None for _ in range(config.COLUMNS)] for _ in range(config.ROWS)]
-    card_state_grid = [[config.STATE_ACTION_TAKEN for _ in range(config.COLUMNS)] for _ in range(config.ROWS)]
+    # Initialize all states to FACE_DOWN initially, will be set during dealing
+    card_state_grid = [[config.STATE_FACE_DOWN for _ in range(config.COLUMNS)] for _ in range(config.ROWS)]
     hand_card_data = [[None for _ in range(config.HAND_COLS)] for _ in range(config.HAND_ROWS)]
 
-    # --- Create the Player ---
-    player_start_row = config.ROWS // 2
-    player_start_col = (config.COLUMNS // 2) - 1
+    # Create the Player
+    player_start_row = 0 # Placeholder - Adjust based on corner placement rule
+    player_start_col = 1
     player = Player(player_start_row, player_start_col)
-    # --- ADD PLAYER SUIT (Needed for Hostile NPC check) ---
-    player.suit = config.PLAYER_SUIT # Assign the suit from config to the player instance
-    # -----------------------------------------------------
+    player.suit = config.PLAYER_SUIT
 
-    # 9. Prepare Deck (Logic remains the same)
-    print("Preparing deck...")
-    full_deck = create_shuffled_deck()
-    # Remove specific card
-    try:
-        card_to_remove = Card(suit=config.CARD_TO_REMOVE_SUIT, rank=config.CARD_TO_REMOVE_RANK, rank_string=config.CARD_TO_REMOVE_RANK_STR)
-        initial_len = len(full_deck)
-        full_deck = [card for card in full_deck if card != card_to_remove]
-        if len(full_deck) < initial_len: print(f"- Removed: {card_to_remove}")
-        else: print(f"- Card to remove ({card_to_remove}) not found in deck.")
-    except Exception as e: print(f"Warning: Error removing card: {e}")
-    # Add Black Joker
+    # --- 9. Prepare Deck (MODIFIED - Separate Red Joker, include Black Joker) ---
+    print("Preparing deck for the Dungeon...")
+    full_deck = create_shuffled_deck() # Start with 52 shuffled
+    print(f"- Started with {len(full_deck)} standard cards.")
+
+    # Define cards to remove/exclude
+    card_to_remove_obj = Card(suit=config.CARD_TO_REMOVE_SUIT, rank=config.CARD_TO_REMOVE_RANK, rank_string=config.CARD_TO_REMOVE_RANK_STR)
+    jack_rank_string = "jack"
+
+    # Build the deck for grid shuffling (excluding Jacks, 2C, and Red Joker initially)
+    deck_for_grid = []
+    removed_count = 0
+    jacks_removed_count = 0
+    for card in full_deck:
+        is_jack = card.get_rank_string() is not None and card.get_rank_string().lower() == jack_rank_string
+        is_two_of_clubs = card == card_to_remove_obj
+
+        if is_jack:
+            # print(f"- Excluding Jack: {card}") # Optional log
+            jacks_removed_count += 1
+        elif is_two_of_clubs:
+            # print(f"- Excluding Two of Clubs: {card}") # Optional log
+            removed_count += 1
+        else:
+            deck_for_grid.append(card)
+
+    print(f"- Excluded {jacks_removed_count} Jacks.")
+    if removed_count > 0: print(f"- Excluded {card_to_remove_obj}.")
+    else: print(f"- Warning: {card_to_remove_obj} not found to exclude.")
+
+    # Create Joker Card objects using corrected rank strings from config
     black_joker_card = Card(config.BLACK_JOKER_SUIT, config.BLACK_JOKER_RANK, config.BLACK_JOKER_RANK_STR)
-    if black_joker_card not in full_deck:
-        full_deck.append(black_joker_card)
-        print("- Added Black Joker")
-        random.shuffle(full_deck)
-        print("- Shuffled Black Joker into deck.")
-    else: print("- Black Joker already in deck?")
-    # Red Joker is handled separately
     red_joker_card = Card(config.RED_JOKER_SUIT, config.RED_JOKER_RANK, config.RED_JOKER_RANK_STR)
-    print(f"Deck ready for dealing (excluding Red Joker): {len(full_deck)} cards")
 
+    # Add ONLY the Black Joker to the deck to be shuffled for random placement
+    deck_for_grid.append(black_joker_card)
+    print(f"- Added Black Joker ({black_joker_card}) to the shuffling pool.")
 
-    # 10. Deal Cards (Logic remains the same)
-    print("Dealing cards...")
+    # Shuffle the deck containing standard cards (minus exclusions) + Black Joker
+    random.shuffle(deck_for_grid)
+    print(f"- Shuffled the deck for grid placement ({len(deck_for_grid)} cards).")
+
+    # The Red Joker is kept separate for center placement.
+    print(f"- Red Joker ({red_joker_card}) kept separate for center placement.")
+
+    expected_grid_deck_size = (config.ROWS * config.COLUMNS) - 1 # Grid size minus the center spot
+    if len(deck_for_grid) != expected_grid_deck_size:
+        exit(f"FATAL ERROR: Deck size for grid ({len(deck_for_grid)}) doesn't match expected ({expected_grid_deck_size}). Check logic.")
+    # --------------------------------------------------------------------------
+
+    # --- 10. Deal Cards (MODIFIED - Place Red Joker in center, deal others) ---
+    print(f"Dealing cards onto the {config.ROWS}x{config.COLUMNS} grid...")
     center_r, center_c = config.ROWS // 2, config.COLUMNS // 2
-    card_index = 0
-    dealt_count = 0
+    card_index = 0 # Index for the shuffled deck_for_grid
+
     for r in range(config.ROWS):
         for c in range(config.COLUMNS):
             if r == center_r and c == center_c:
-                card_state_grid[r][c] = config.STATE_FACE_DOWN
-                continue
-            if card_index < len(full_deck):
-                card_data_grid[r][c] = full_deck[card_index]
-                card_state_grid[r][c] = config.STATE_FACE_DOWN
-                card_index += 1
-                dealt_count += 1
+                # Place Red Joker in the center
+                card_data_grid[r][c] = red_joker_card
+                card_state_grid[r][c] = config.STATE_FACE_DOWN # Ensure center is face down
+                print(f"- Placed Red Joker at center ({r},{c}).")
             else:
-                card_state_grid[r][c] = config.STATE_ACTION_TAKEN
-    card_data_grid[center_r][center_c] = red_joker_card
-    print(f"- Dealt {dealt_count} cards. Red Joker placed in center. Total active cards: {dealt_count + 1}")
+                # Deal from the shuffled deck (containing Black Joker)
+                if card_index < len(deck_for_grid):
+                    card_data_grid[r][c] = deck_for_grid[card_index]
+                    card_state_grid[r][c] = config.STATE_FACE_DOWN # Ensure non-center is face down
+                    card_index += 1
+                else:
+                    # Error case - should not happen if deck size check passed
+                    print(f"ERROR: Ran out of grid deck cards at ({r},{c})!")
+                    card_data_grid[r][c] = None
+                    card_state_grid[r][c] = config.STATE_ACTION_TAKEN
 
-    # 11. Create Grid Buttons (Lambda passes all necessary state)
+    total_dealt = card_index + 1 # +1 for the Red Joker
+    expected_total = config.ROWS * config.COLUMNS
+    if total_dealt == expected_total:
+        print(f"- Successfully placed all {total_dealt} cards.")
+    else:
+        print(f"- Warning: Placed {total_dealt} cards, but expected {expected_total}.")
+    # ----------------------------------------------------------------------
+
+    # 11. Create Grid Buttons (Logic remains the same)
     print("Creating button grid...")
     button_bg = grid_frame.cget('bg')
+    buttons_created = 0
     for r in range(config.ROWS):
         for c in range(config.COLUMNS):
             card = card_data_grid[r][c]
             current_state = card_state_grid[r][c]
 
+            # Create button if there's a card and it's face down
             if card is not None and current_state == config.STATE_FACE_DOWN:
-                # Lambda captures all state needed by handle_card_click -> handle_card_action -> initiate_combat
                 click_command = lambda row=r, col=c: game_logic.handle_card_click(
                     row, col,
-                    root, player, # Core components (incl player with suit)
-                    card_data_grid, button_grid, card_state_grid, # Grids
-                    hand_card_data, hand_card_slots, # Hand components
-                    assets, info_frame_bg # UI/Asset components
+                    root, player,
+                    card_data_grid, button_grid, card_state_grid,
+                    hand_card_data, hand_card_slots,
+                    assets, info_frame_bg
                 )
-
                 button = tk.Button(grid_frame, image=tk_photo_back,
                                    command=click_command,
                                    borderwidth=0, highlightthickness=0, relief=tk.FLAT,
@@ -153,11 +191,14 @@ def main():
                 button.image = tk_photo_back
                 button.grid(row=r, column=c, padx=1, pady=1)
                 button_grid[r][c] = button
+                buttons_created += 1
             else:
-                # Placeholder Frame
+                # Should only happen if dealing failed somehow
+                print(f"Warning: No button created for grid cell ({r},{c}). Card: {card}, State: {current_state}")
                 placeholder = tk.Frame(grid_frame, width=scaled_width, height=scaled_height, bg=grid_frame.cget('bg'))
                 placeholder.grid(row=r, column=c, padx=1, pady=1)
                 button_grid[r][c] = None
+    print(f"- Created {buttons_created} buttons.")
 
     # Optional Debug Prints
     # utils.simple_print_grid(card_data_grid, title="Card Data Grid (Initial)", cols=config.COLUMNS)

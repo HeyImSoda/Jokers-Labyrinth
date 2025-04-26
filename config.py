@@ -29,25 +29,25 @@ HAND_OVERLAP_FACTOR = 0.45 # Show 45% of the card width for overlap
 HAND_VERTICAL_PADDING = 10 # Pixels between hand rows
 
 # --- Game Rules ---
-PLAYER_SUIT = "spades" # Example: Player is the Jack of Spades.
+PLAYER_SUIT = "spades" # Example: Player character identifies with this suit for NPC interactions.
 
 # --- Card States ---
 STATE_FACE_DOWN = 0
 STATE_FACE_UP = 1
-STATE_ACTION_TAKEN = 2
+STATE_ACTION_TAKEN = 2 # Represents an empty/processed slot or post-combat disabled state
 
 # --- Joker Settings ---
-# Define how jokers are represented in Card objects and image filenames
-# Ensure these match your Card class and asset naming convention
+# --- CORRECTED Rank Strings to match asset filenames ---
 BLACK_JOKER_SUIT = "black_joker"
 BLACK_JOKER_RANK = 14
-BLACK_JOKER_RANK_STR = "fourteen"
+BLACK_JOKER_RANK_STR = "fourteen" # Corrected
 
 RED_JOKER_SUIT = "red_joker"
 RED_JOKER_RANK = 14
-RED_JOKER_RANK_STR = "fourteen"
+RED_JOKER_RANK_STR = "fourteen" # Corrected
+# ------------------------------------------------------
 
-# Card to remove (optional, ensure it exists in create_shuffled_deck output)
+# --- Card to Remove ---
 CARD_TO_REMOVE_SUIT = "clubs"
 CARD_TO_REMOVE_RANK = 2
 CARD_TO_REMOVE_RANK_STR = "two"
