@@ -6,6 +6,9 @@ import os
 ASSETS_BASE_PATH = r"C:\Users\stell\Desktop\Python Files\Jokers_Labyrinth\assets" # <<< Use your actual path
 CARD_FACES_PATH = os.path.join(ASSETS_BASE_PATH, "card_faces")
 CARD_BACK_PATH = os.path.join(ASSETS_BASE_PATH, "card_back.png")
+# --- ADDED: Path for Dice Faces ---
+DICE_FACES_PATH = os.path.join(ASSETS_BASE_PATH, "dice_faces")
+# ----------------------------------
 
 # --- Grid Dimensions ---
 ROWS = 7
@@ -37,19 +40,21 @@ STATE_FACE_UP = 1
 STATE_ACTION_TAKEN = 2 # Represents an empty/processed slot or post-combat disabled state
 
 # --- Joker Settings ---
-# --- CORRECTED Rank Strings to match asset filenames ---
 BLACK_JOKER_SUIT = "black_joker"
 BLACK_JOKER_RANK = 14
-BLACK_JOKER_RANK_STR = "fourteen" # Corrected
+BLACK_JOKER_RANK_STR = "fourteen"
 
 RED_JOKER_SUIT = "red_joker"
 RED_JOKER_RANK = 14
-RED_JOKER_RANK_STR = "fourteen" # Corrected
-# ------------------------------------------------------
+RED_JOKER_RANK_STR = "fourteen"
 
 # --- Card to Remove ---
 CARD_TO_REMOVE_SUIT = "clubs"
 CARD_TO_REMOVE_RANK = 2
 CARD_TO_REMOVE_RANK_STR = "two"
+
+# --- Dice Visuals ---
+# Optional: Scale factor for dice images if needed
+DICE_SCALE_FACTOR = 0.3 # Example: Scale dice images down
 
 # --- END OF FILE config.py ---

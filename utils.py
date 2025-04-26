@@ -1,5 +1,7 @@
 # --- START OF FILE utils.py ---
 
+import random # <--- Added missing import
+
 def simple_print_grid(grid_to_print, title="Grid", cols=None):
     """Prints a 2D grid to the console with basic formatting."""
     print(f"\n--- Simple {title} Printout ---")
@@ -14,12 +16,11 @@ def simple_print_grid(grid_to_print, title="Grid", cols=None):
     max_len = 0
     for r in range(num_rows):
         for c in range(num_cols):
-            # Handle potential errors if grid ragged and cols not provided
             try:
                  item_repr = repr(grid_to_print[r][c])
                  if len(item_repr) > max_len: max_len = len(item_repr)
             except IndexError:
-                 pass # Ignore cells outside inferred width if grid is ragged
+                 pass
 
     # Print grid
     for row_idx, row in enumerate(grid_to_print):
@@ -28,10 +29,18 @@ def simple_print_grid(grid_to_print, title="Grid", cols=None):
             try:
                  item_repr = repr(row[c_idx])
             except IndexError:
-                 item_repr = " " # Print space for missing columns
+                 item_repr = " "
             print(f"{item_repr:<{max_len+2}}", end="")
         print()
     print("-" * (num_cols * (max_len + 2) + 5) + "\n")
 
+# --- ADDED Missing Dice Rolling Function ---
+def roll_dice(num_dice):
+    """ Rolls a specified number of standard 6-sided dice. """
+    if num_dice <= 0:
+        return []
+    # Ensure random is imported at the top
+    return [random.randint(1, 6) for _ in range(num_dice)]
+# -----------------------------------------
 
 # --- END OF FILE utils.py ---
