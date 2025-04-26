@@ -3,7 +3,8 @@
 import tkinter as tk
 import config
 import animation # Import animation functions
-import card_actions # Import the new actions module
+import card_actions # Import the actions module
+# No combat_manager needed here directly
 
 # --- Callback function after flip animation ---
 def on_card_revealed(
@@ -14,14 +15,8 @@ def on_card_revealed(
     """
     Finalizes reveal after animation, sets final image, RE-ENABLES button for second click.
     Called by root.after() scheduled in animate_flip.
-
-    Args:
-        row, col: Coordinates of the card revealed.
-        button_grid: 2D list holding Tkinter Button widgets or None.
-        card_data_grid: 2D list holding Card objects or None.
-        card_state_grid: 2D list holding card state constants.
-        assets: Dictionary containing all loaded image assets (PIL and Tk).
     """
+    # (Function body remains the same)
     # Access data using arguments
     button = button_grid[row][col] if (0 <= row < config.ROWS and 0 <= col < config.COLUMNS and button_grid[row][col]) else None
     card = card_data_grid[row][col] if (0 <= row < config.ROWS and 0 <= col < config.COLUMNS) else None
@@ -68,16 +63,7 @@ def handle_card_click(
     """
     Called when a button on the grid is clicked.
     Routes to flip animation OR calls card_actions.handle_card_action.
-    Includes basic player adjacency check.
-
-    Args:
-        row, col: Coordinates of the clicked button.
-        root: The main Tkinter window.
-        player: The Player object instance.
-        card_data_grid, button_grid, card_state_grid: Game state grids.
-        hand_card_data, hand_card_slots: Hand display state.
-        assets: Dictionary of all assets.
-        info_frame_bg: Background color of the info frame.
+    Includes basic player adjacency check (still commented out).
     """
     # Bounds check
     if not (0 <= row < config.ROWS and 0 <= col < config.COLUMNS):
@@ -96,7 +82,6 @@ def handle_card_click(
 
     button = button_grid[row][col] # Might be None if card was taken
     card = card_data_grid[row][col] # Might be None
-    # Safely access state grid element
     try:
         current_state = card_state_grid[row][col]
     except IndexError:
@@ -108,7 +93,6 @@ def handle_card_click(
 
     # Ignore clicks on fully processed/removed slots or empty center
     if current_state == config.STATE_ACTION_TAKEN or card is None:
-        # print(f"Ignoring click on ({row},{col}) - State: {current_state}, Card: {card}")
         return
 
     # Handle clicks based on state
@@ -117,14 +101,16 @@ def handle_card_click(
             print(f"First click on ({row},{col}). Flipping card...")
             button.config(state=tk.DISABLED) # Disable during animation
 
-            # Prepare the callback with necessary arguments
-            # We need a way to pass the required args to on_card_revealed when root.after calls it.
-            # A lambda function is a good way to do this.
+            # --- Lambda for callback needs all args required by on_card_revealed ---
             reveal_callback_with_args = lambda r=row, c=col: on_card_revealed(
-                r, c, button_grid, card_data_grid, card_state_grid, assets
+                r, c,
+                button_grid, card_data_grid, card_state_grid, # Pass grids
+                assets # Pass assets
             )
 
+            # Pass the lambda function to animate_flip
             animation.animate_flip(root, button, card, assets, reveal_callback_with_args, row, col)
+
         elif button_exists:
              print(f"Ignoring click on ({row},{col}) - Button not normal (State: {button_state})")
         else:
@@ -134,22 +120,22 @@ def handle_card_click(
     elif current_state == config.STATE_FACE_UP: # Face Up -> Action
         if button_exists and button_state == tk.NORMAL:
             print(f"Second click on ({row},{col}). Performing action...")
-            # Call the action handler from the dedicated module, passing all required state
+            # Call the action handler, passing all required state
+            # It now needs root and player as well for combat initiation
             card_actions.handle_card_action(
                 row, col,
+                root, player, # Pass root and player
                 card_data_grid, button_grid, card_state_grid,
                 hand_card_data, hand_card_slots,
                 assets, info_frame_bg
-                # Pass player here if handle_card_action needs it: player=player
             )
         elif button_exists:
              print(f"Ignoring click on face-up card ({row},{col}) - Button not normal (State: {button_state})")
         else:
-             # Button gone after reveal? Should not happen unless reveal failed badly.
              print(f"Error: Clicked face-up slot ({row},{col}) but button is missing.")
              card_state_grid[row][col] = config.STATE_ACTION_TAKEN # Mark as error/disabled
 
-    else: # Should not happen if state checks are correct
+    else: # Should not happen
         print(f"Warning: Unhandled click state for ({row},{col}) - GridState: {current_state}, Button Exists: {button_exists}, ButtonState: {button_state}")
 
 # --- END OF FILE game_logic.py ---
