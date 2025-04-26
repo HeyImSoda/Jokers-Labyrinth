@@ -17,10 +17,10 @@ ANIMATION_DELAY = 6 # Milliseconds between animation steps (Card Flip)
 ANIMATION_STEPS = 36 # How many steps for shrink/grow (Card Flip)
 
 # --- Card Visuals ---
-CARD_SCALE_FACTOR = 1.5
+CARD_SCALE_FACTOR = 1.6
 
 # --- UI Layout ---
-INFO_PANEL_WIDTH = 350
+INFO_PANEL_WIDTH = 450
 GRID_PADDING_FACTOR = 1.0
 
 # --- Hand Layout ---
@@ -57,13 +57,13 @@ DICE_SCALE_FACTOR = 0.3
 
 DICE_ROLL_DELAY = 350       # Milliseconds between each difference die appearing (NO LONGER USED FOR DIFF DICE)
 DICE_SHUFFLE_DELAY = 60     # Milliseconds between danger die shuffle frames
-DICE_SHUFFLE_STEPS = 12     # How many times the danger die image changes rapidly
-DICE_STOP_DELAY_FRAMES = 3  # Extra shuffle frames between each diff die stopping sequentially
+DICE_SHUFFLE_STEPS = 14     # How many times the danger die image changes rapidly
+DICE_STOP_DELAY_FRAMES = 4  # Extra shuffle frames between each diff die stopping sequentially
 
 
 # --- NEW: Sequential Shuffle Steps ---
 DICE_BASE_SHUFFLE_STEPS = 10       # Minimum shuffle frames for the first die
-DICE_INCREMENTAL_SHUFFLE_STEPS = 3 # Additional frames for each subsequent die
+DICE_INCREMENTAL_SHUFFLE_STEPS = 4 # Additional frames for each subsequent die
 # Example: Die 1: 10 frames, Die 2: 13, Die 3: 16, etc.
 # Danger Die will use DICE_BASE_SHUFFLE_STEPS + DICE_INCREMENTAL_SHUFFLE_STEPS for consistency
 # ------------------------------------

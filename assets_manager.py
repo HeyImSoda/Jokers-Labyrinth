@@ -70,7 +70,7 @@ def load_pil_assets():
         1: "die_one.png", 2: "die_two.png", 3: "die_three.png",
         4: "die_four.png", 5: "die_five.png", 6: "die_six.png",
         # --- ADDED ICON MAPPING ---
-        'icon': "die_isometric_small.png"
+        'icon': "die_isometric_big.png"
         # --------------------------
     }
     print(f"Attempting to load dice and icon from directory: {config.DICE_FACES_PATH}")

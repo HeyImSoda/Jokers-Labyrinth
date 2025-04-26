@@ -76,7 +76,7 @@ class CombatRollView: # Renamed from CombatRollWindow
 
         # --- 3. Difference Dice Display Area --- (Layout remains the same)
         diff_outer_frame = ttk.LabelFrame(self.frame, text="Difference Dice", padding=(10, 5))
-        diff_outer_frame.config(height=estimated_dice_h + 10)
+        diff_outer_frame.config(height=estimated_dice_h + 35)
         diff_outer_frame.pack(fill='x', pady=5)
         diff_outer_frame.pack_propagate(False)
         self.diff_dice_display_frame = ttk.Frame(diff_outer_frame)
@@ -85,7 +85,7 @@ class CombatRollView: # Renamed from CombatRollWindow
 
         # --- 4. Danger Die Display Area --- (Layout remains the same)
         danger_outer_frame = ttk.LabelFrame(self.frame, text="Danger Die", padding=(10, 5))
-        danger_outer_frame.config(height=estimated_dice_h + 10)
+        danger_outer_frame.config(height=estimated_dice_h + 35)
         danger_outer_frame.pack(fill='x', pady=5)
         danger_outer_frame.pack_propagate(False)
         self.danger_die_display_frame = ttk.Frame(danger_outer_frame)
