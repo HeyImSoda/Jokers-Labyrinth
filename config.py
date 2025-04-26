@@ -54,8 +54,19 @@ CARD_TO_REMOVE_RANK_STR = "two"
 DICE_SCALE_FACTOR = 0.3
 
 # --- Combat Animation Timings (NEW) ---
-DICE_ROLL_DELAY = 350       # Milliseconds between each difference die appearing
+
+DICE_ROLL_DELAY = 350       # Milliseconds between each difference die appearing (NO LONGER USED FOR DIFF DICE)
 DICE_SHUFFLE_DELAY = 60     # Milliseconds between danger die shuffle frames
 DICE_SHUFFLE_STEPS = 12     # How many times the danger die image changes rapidly
+DICE_STOP_DELAY_FRAMES = 3  # Extra shuffle frames between each diff die stopping sequentially
+
+
+# --- NEW: Sequential Shuffle Steps ---
+DICE_BASE_SHUFFLE_STEPS = 10       # Minimum shuffle frames for the first die
+DICE_INCREMENTAL_SHUFFLE_STEPS = 3 # Additional frames for each subsequent die
+# Example: Die 1: 10 frames, Die 2: 13, Die 3: 16, etc.
+# Danger Die will use DICE_BASE_SHUFFLE_STEPS + DICE_INCREMENTAL_SHUFFLE_STEPS for consistency
+# ------------------------------------
+
 
 # --- END OF FILE config.py ---
