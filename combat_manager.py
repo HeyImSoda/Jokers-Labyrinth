@@ -8,7 +8,7 @@ import utils # For roll_dice
 from card_logic import Card
 import hand_manager # For clearing hand on Queen loss
 
-# (CombatSetupWindow remains the same as before)
+# (CombatSetupWindow Class remains unchanged)
 class CombatSetupWindow(tk.Toplevel):
     """Modal window for selecting a value card before combat."""
     def __init__(self, parent, target_card, value_cards_in_hand, callback):
@@ -83,7 +83,7 @@ class CombatSetupWindow(tk.Toplevel):
         self.destroy()
         self.callback(False)
 
-# --- CombatRollWindow Class ---
+# (CombatRollWindow Class remains unchanged)
 class CombatRollWindow(tk.Toplevel):
     """Modal window for interactively rolling combat dice."""
     def __init__(self, parent, player, target_card, target_row, target_col,
@@ -126,16 +126,11 @@ class CombatRollWindow(tk.Toplevel):
 
         # Frame for Difference Dice
         self.diff_dice_display_frame = ttk.LabelFrame(self, text="Difference Dice")
-        # --- CORRECTED: Removed minheight ---
         self.diff_dice_display_frame.pack(fill='x', pady=5)
-        # -----------------------------------
 
         # Frame for Danger Die
         self.danger_die_display_frame = ttk.LabelFrame(self, text="Danger Die")
-        # --- CORRECTED: Removed minheight ---
         self.danger_die_display_frame.pack(fill='x', pady=5)
-        # -----------------------------------
-        # Placeholder label for danger die image
         self.danger_die_label = ttk.Label(self.danger_die_display_frame)
         self.danger_die_label.pack(pady=5)
 
@@ -243,8 +238,7 @@ class CombatRollWindow(tk.Toplevel):
             self.danger_die_roll  # Pass the final danger roll
         )
 
-
-# (CombatResultsWindow remains the same as before)
+# (CombatResultsWindow Class remains unchanged)
 class CombatResultsWindow(tk.Toplevel):
     """Modal window to display combat results, now with dice images."""
     def __init__(self, parent, results_data, tk_dice_images): # Added tk_dice_images
@@ -318,7 +312,7 @@ class CombatResultsWindow(tk.Toplevel):
         self.wait_window()
 
 
-# (get_value_cards_from_hand remains the same)
+# (get_value_cards_from_hand remains unchanged)
 def get_value_cards_from_hand(hand_card_data, player_suit):
     """Finds valid value cards (Red Numbers OR Friendly Q/K) in the hand."""
     value_cards = []
@@ -339,7 +333,7 @@ def get_value_cards_from_hand(hand_card_data, player_suit):
 
     return value_cards
 
-# (initiate_combat remains the same)
+# (initiate_combat remains unchanged)
 def initiate_combat(root, player, target_card, target_row, target_col, game_state):
     """Starts the combat setup phase."""
     print(f"Initiating combat against {target_card} at ({target_row}, {target_col})")
@@ -354,7 +348,7 @@ def initiate_combat(root, player, target_card, target_row, target_col, game_stat
         prepare_combat_resolution(root, player, target_card, target_row, target_col, selected_value_card_info, game_state)
     CombatSetupWindow(root, target_card, value_cards, combat_setup_callback)
 
-# (prepare_combat_resolution remains the same)
+# (prepare_combat_resolution remains unchanged)
 def prepare_combat_resolution(root, player, target_card, target_row, target_col, selected_value_card_info, game_state):
     """Calculates combat parameters and opens the CombatRollWindow."""
     print("Preparing combat resolution...")
@@ -385,7 +379,8 @@ def prepare_combat_resolution(root, player, target_card, target_row, target_col,
     CombatRollWindow(root, player, target_card, target_row, target_col,
                      selected_value_card_info, game_state, combat_params)
 
-# (finalize_combat remains the same)
+
+# (finalize_combat remains unchanged)
 def finalize_combat(root, player, target_card, target_row, target_col,
                     selected_value_card_info, game_state,
                     attacker_total, defender_total, difference, num_diff_dice,
@@ -412,7 +407,7 @@ def finalize_combat(root, player, target_card, target_row, target_col,
     CombatResultsWindow(root, results_data, tk_dice_images)
 
 
-# (handle_combat_win remains the same)
+# --- MODIFIED: handle_combat_win ---
 def handle_combat_win(player, target_row, target_col, selected_value_card_info, game_state, results_data):
     """Applies consequences of winning combat."""
     button_grid = game_state["button_grid"]
@@ -420,10 +415,18 @@ def handle_combat_win(player, target_row, target_col, selected_value_card_info, 
     card_state_grid = game_state["card_state_grid"]
     hand_card_data = game_state["hand_card_data"]
     hand_card_slots = game_state["hand_card_slots"]
+    # Get necessary assets for hand redraw
+    tk_card_face_images = game_state["assets"].get("tk_faces", {})
+
+    # 1. Discard used value card
     if selected_value_card_info:
-        used_card, hand_r, hand_c = selected_value_card_info
-        if hand_manager.remove_card_from_hand(used_card, hand_card_data, hand_card_slots): results_data["consequences"].append(f"Discarded {used_card} from hand.")
+        used_card, _, _ = selected_value_card_info # Don't need r, c here
+        # Pass tk_card_face_images to the remove function for redraw
+        if hand_manager.remove_card_from_hand(used_card, hand_card_data, hand_card_slots, tk_card_face_images):
+             results_data["consequences"].append(f"Discarded {used_card} from hand.")
         else: results_data["consequences"].append(f"Error removing {used_card} from hand.")
+
+    # 2. Discard hazard/NPC from grid
     target_card = card_data_grid[target_row][target_col]
     results_data["consequences"].append(f"Discarded {target_card} from the Dungeon.")
     button = button_grid[target_row][target_col]
@@ -431,34 +434,50 @@ def handle_combat_win(player, target_row, target_col, selected_value_card_info, 
     button_grid[target_row][target_col] = None
     card_data_grid[target_row][target_col] = None
     card_state_grid[target_row][target_col] = config.STATE_ACTION_TAKEN
+
+    # 3. Move player
     old_pos = player.position
     player.set_position(target_row, target_col)
     results_data["consequences"].append(f"Player moved from {old_pos} to ({target_row}, {target_col}).")
 
 
-# (handle_combat_loss remains the same - already included re-enable logic)
+# --- MODIFIED: handle_combat_loss ---
 def handle_combat_loss(player, target_row, target_col, selected_value_card_info, game_state, results_data):
     """Applies consequences of losing combat."""
     hand_card_data = game_state["hand_card_data"]
     hand_card_slots = game_state["hand_card_slots"]
     button_grid = game_state["button_grid"]
     card_state_grid = game_state["card_state_grid"]
+    # Get necessary assets for hand redraw/clear
+    tk_card_face_images = game_state["assets"].get("tk_faces", {})
+
+
+    # 1. Discard used value card
     if selected_value_card_info:
-        used_card, hand_r, hand_c = selected_value_card_info
-        if hand_manager.remove_card_from_hand(used_card, hand_card_data, hand_card_slots): results_data["consequences"].append(f"Discarded {used_card} from hand.")
+        used_card, _, _ = selected_value_card_info
+        # Pass tk_card_face_images to the remove function for redraw
+        if hand_manager.remove_card_from_hand(used_card, hand_card_data, hand_card_slots, tk_card_face_images):
+             results_data["consequences"].append(f"Discarded {used_card} from hand.")
         else: results_data["consequences"].append(f"Error removing {used_card} from hand.")
-    else: results_data["consequences"].append("No value card was used.")
+    else:
+        results_data["consequences"].append("No value card was used.")
+
+    # 2. Cannot move past Hazard/NPC
     results_data["consequences"].append(f"Player cannot move past {results_data['target']}.")
     button = button_grid[target_row][target_col]
     if button and button.winfo_exists(): button.config(state=tk.NORMAL) # Re-enable button
     card_state_grid[target_row][target_col] = config.STATE_FACE_UP # Allow clicking again
+
+    # 3. Resolve NPC effects
     target_card = results_data['target']
     target_rank = target_card.get_rank()
     is_hostile_npc = target_rank in [12, 13]
+
     if is_hostile_npc:
         if target_rank == 12: # Lost to hostile Queen
             results_data["consequences"].append("Lost to hostile Queen: Discard all cards from hand!")
-            hand_manager.clear_hand_display(hand_card_data, hand_card_slots)
+            # Pass necessary arguments to clear_hand_display
+            hand_manager.clear_hand_display(hand_card_data, hand_card_slots) # Bg color obtained inside
         elif target_rank == 13: # Lost to hostile King
              results_data["consequences"].append("Lost to hostile King: Skip next turn! (Effect TBD)")
              if hasattr(player, 'set_skip_turn'): player.set_skip_turn(True)
