@@ -172,12 +172,12 @@ def main():
     print("Preparing deck for the Dungeon...")
     full_deck = create_shuffled_deck() # Standard 52 cards
     # --- Rulebook Setup ---
-    # 1. Separate Jacks, one Joker, one Black 10. Shuffle rest.
+    # 1. Separate Jacks, one Joker. Shuffle rest.
     jacks = [card for card in full_deck if card.get_rank() == 11]
     other_cards = [card for card in full_deck if card.get_rank() != 11]
 
     # Define the specific black 10 (e.g., 10 of Clubs)
-    black_10_card = Card(suit="clubs", rank=10, rank_string="ten") # Assuming Clubs is black
+    # black_10_card = Card(suit="clubs", rank=10, rank_string="ten") # Assuming Clubs is black
     black_joker_card = Card(config.BLACK_JOKER_SUIT, config.BLACK_JOKER_RANK, config.BLACK_JOKER_RANK_STR)
     red_joker_card = Card(config.RED_JOKER_SUIT, config.RED_JOKER_RANK, config.RED_JOKER_RANK_STR)
 
